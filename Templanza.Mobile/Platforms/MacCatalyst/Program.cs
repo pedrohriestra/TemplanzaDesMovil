@@ -1,4 +1,5 @@
 ﻿using ObjCRuntime;
+using Templanza.Mobile.Services;
 using UIKit;
 
 namespace Templanza.Mobile

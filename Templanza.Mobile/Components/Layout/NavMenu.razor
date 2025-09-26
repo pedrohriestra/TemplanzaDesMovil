@@ -1,0 +1,72 @@
+﻿@using Microsoft.AspNetCore.Components.Routing
+@inject AuthService Auth
+@inject NavigationManager Nav
+
+<nav class="navbar navbar-expand-lg bg-body-tertiary px-3">
+    <a class="navbar-brand d-flex align-items-center" href="">
+        <i class="bi bi-cup-hot me-2"></i> Templanza
+    </a>
+
+    <div class="collapse navbar-collapse show">
+        <ul class="navbar-nav me-auto">
+            <li class="nav-item">
+                <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                    <i class="bi bi-house"></i> Home
+                </NavLink>
+            </li>
+            <li class="nav-item">
+                <NavLink class="nav-link" href="blends">
+                    <i class="bi bi-basket"></i> Blends
+                </NavLink>
+            </li>
+            <li class="nav-item">
+                <NavLink class="nav-link" href="profile">
+                    <i class="bi bi-person-badge"></i> Mi cuenta
+                </NavLink>
+            </li>
+            @if (isAdmin)
+            {
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="users">
+                        <i class="bi bi-people"></i> Usuarios
+                    </NavLink>
+                </li>
+            }
+        </ul>
+
+        <div class="d-flex">
+            @if (loggedIn)
+            {
+                <button class="btn btn-outline-secondary" @onclick="DoLogout">
+                    <i class="bi bi-box-arrow-right"></i> Logout
+                </button>
+            }
+            else
+            {
+                <NavLink class="btn btn-primary" href="login">
+                    <i class="bi bi-person"></i> Login
+                </NavLink>
+            }
+        </div>
+    </div>
+</nav>
+
+@code {
+    bool loggedIn;
+    bool isAdmin;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var t = await SecureStorage.GetAsync("jwt");
+        loggedIn = !string.IsNullOrWhiteSpace(t);
+        isAdmin = await Auth.IsAdminAsync(); // 🔑 usa el helper que armamos
+    }
+
+    async Task DoLogout()
+    {
+        await Auth.LogoutAsync();
+        loggedIn = false;
+        isAdmin = false;
+        Nav.NavigateTo("login", forceLoad: true);
+    }
+}

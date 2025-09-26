@@ -1,0 +1,150 @@
+﻿@page "/users"
+@inject UsersService UsersSvc
+@inject AuthService Auth
+
+<h3>Usuarios</h3>
+
+@if (!isAdmin)
+{
+    <div class="alert alert-warning">No autorizado (solo Admin).</div>
+}
+else if (items is null)
+{
+    <p>Cargando...</p>
+}
+else
+{
+    <table class="table table-sm align-middle">
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Nombre</th>
+                <th>Email</th>
+                <th>Rol</th>
+                <th>Activo</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var u in items)
+            {
+                <tr>
+                    <td>@u.Id</td>
+                    <td>@u.Nombre</td>
+                    <td>@u.Email</td>
+                    <td>@u.Rol</td>
+                    <td>@(u.Activo ? "Sí" : "No")</td>
+                    <td class="text-end">
+                        <button class="btn btn-outline-secondary btn-sm me-1" @onclick="() => Edit(u)">Editar</button>
+                        <button class="btn btn-outline-danger btn-sm" @onclick="() => Remove(u.Id)">Borrar</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <hr />
+    <h5>@(editingId == 0 ? "Nuevo usuario" : $"Editar #{editingId}")</h5>
+    <div class="row g-2">
+        <div class="col-md-3"><input class="form-control" placeholder="Nombre" @bind="form.Nombre" /></div>
+        <div class="col-md-3"><input class="form-control" placeholder="Email" @bind="form.Email" /></div>
+        <div class="col-md-2">
+            <select class="form-select" @bind="form.Rol">
+                <option>Usuario</option>
+                <option>Admin</option>
+            </select>
+        </div>
+        <div class="col-md-2"><input class="form-control" placeholder="Imagen URL" @bind="form.ImagenUrl" /></div>
+        <div class="col-md-2 d-flex align-items-center">
+            <input id="chk-activo" type="checkbox" class="form-check-input me-2" @bind="form.Activo" />
+            <label for="chk-activo">Activo</label>
+        </div>
+    </div>
+    <div class="row g-2 mt-2">
+        <div class="col-md-4"><input class="form-control" placeholder="Password (opcional)" @bind="form.Password" /></div>
+        <div class="col-md-8 text-end">
+            <button class="btn btn-success me-2" @onclick="Save">Guardar</button>
+            <button class="btn btn-outline-secondary" @onclick="Cancel">Cancelar</button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(err))
+    {
+        <div class="text-danger mt-2">@err</div>
+    }
+}
+
+@code {
+    bool isAdmin;
+    List<UsersService.UserDto>? items;
+    int editingId = 0;
+
+    // ⬇️ SIN ctor: inicializador de objeto
+    UsersService.UserUpsertDto form = new()
+    {
+        Nombre = "",
+        Email = "",
+        Rol = "Usuario",
+        ImagenUrl = null,
+        Activo = true,
+        Password = null
+    };
+
+    string? err;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isAdmin = await Auth.IsAdminAsync();
+        if (isAdmin) items = await UsersSvc.GetAllAsync() ?? [];
+    }
+
+    void Edit(UsersService.UserDto u)
+    {
+        editingId = u.Id;
+        // ⬇️ copiar a mano
+        form = new()
+        {
+            Nombre = u.Nombre,
+            Email = u.Email,
+            Rol = u.Rol,
+            ImagenUrl = u.ImagenUrl,
+            Activo = u.Activo,
+            Password = null
+        };
+    }
+
+    async Task Save()
+    {
+        err = null;
+        bool ok = editingId == 0
+            ? await UsersSvc.CreateAsync(form)
+            : await UsersSvc.UpdateAsync(editingId, form);
+
+        if (ok)
+        {
+            items = await UsersSvc.GetAllAsync() ?? [];
+            Cancel();
+        }
+        else err = "No se pudo guardar (ver permisos/validación)";
+    }
+
+    void Cancel()
+    {
+        editingId = 0;
+        form = new()
+        {
+            Nombre = "",
+            Email = "",
+            Rol = "Usuario",
+            ImagenUrl = null,
+            Activo = true,
+            Password = null
+        };
+    }
+
+    async Task Remove(int id)
+    {
+        if (await UsersSvc.DeleteAsync(id))
+            items = await UsersSvc.GetAllAsync() ?? [];
+    }
+}

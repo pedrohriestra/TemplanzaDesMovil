@@ -1,0 +1,71 @@
+﻿@page "/blends"
+@inject BlendsService BlendsSvc
+
+<h3>Blends</h3>
+
+@if (items == null)
+{
+    <p>Cargando...</p>
+}
+else
+{
+    <div class="row row-cols-1 row-cols-md-3 g-3">
+        @foreach (var b in items)
+        {
+            <div class="col">
+                <div class="card h-100">
+                    <img class="card-img-top" src="@b.ImagenUrl" alt="img" />
+                    <div class="card-body">
+                        <h5 class="card-title">@b.Nombre</h5>
+                        <p class="card-text">@b.Tipo · $@b.Precio · Stock: @b.Stock</p>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn btn-outline-danger btn-sm" @onclick="() => Delete(b.Id)">Eliminar</button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <hr />
+    <h5>Nuevo</h5>
+    <input class="form-control mb-1" @bind="nuevo.Nombre" placeholder="Nombre" />
+    <input class="form-control mb-1" @bind="nuevo.Tipo" placeholder="Tipo" />
+    <input class="form-control mb-1" type="number" @bind="nuevo.Precio" placeholder="Precio" />
+    <input class="form-control mb-1" type="number" @bind="nuevo.Stock" placeholder="Stock" />
+    <input class="form-control mb-2" @bind="nuevo.ImagenUrl" placeholder="Imagen URL" />
+    <button class="btn btn-success" @onclick="Create">Crear</button>
+    @if (err != null)
+    {
+        <div class="text-danger mt-2">@err</div>
+    }
+}
+
+@code {
+    List<Templanza.Domain.Blend>? items;
+    Templanza.Domain.Blend nuevo = new();
+    string? err;
+
+    protected override async Task OnInitializedAsync()
+    {
+        items = await BlendsSvc.GetAllAsync() ?? [];
+    }
+
+    async Task Create()
+    {
+        err = null;
+        if (await BlendsSvc.CreateAsync(nuevo))
+        {
+            items = await BlendsSvc.GetAllAsync() ?? [];
+            nuevo = new();
+        }
+        else err = "Necesitás token de Admin para crear";
+    }
+
+    async Task Delete(int id)
+    {
+        if (await BlendsSvc.DeleteAsync(id))
+            items = await BlendsSvc.GetAllAsync() ?? [];
+        else err = "Necesitás token de Admin para eliminar";
+    }
+}

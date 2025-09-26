@@ -1,4 +1,5 @@
 ﻿using Foundation;
+using Templanza.Mobile.Services;
 
 namespace Templanza.Mobile
 {

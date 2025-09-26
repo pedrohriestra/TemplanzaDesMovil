@@ -1,0 +1,59 @@
+﻿@page "/profile"
+@inject UsersService UsersSvc
+
+<h3>Mi cuenta</h3>
+
+@if (me is null)
+{
+    <p>Cargando...</p>
+}
+else
+{
+    <div class="row g-2">
+        <div class="col-md-4"><input class="form-control" @bind="form.Nombre" placeholder="Nombre" /></div>
+        <div class="col-md-4"><input class="form-control" @bind="form.Email" placeholder="Email" /></div>
+        <div class="col-md-4"><input class="form-control" @bind="form.ImagenUrl" placeholder="Imagen URL" /></div>
+    </div>
+    <div class="row g-2 mt-2">
+        <div class="col-md-4"><input class="form-control" @bind="form.Password" placeholder="Password (opcional)" /></div>
+        <div class="col-md-8 text-end">
+            <button class="btn btn-success" @onclick="Save">Guardar cambios</button>
+        </div>
+    </div>
+    @if (!string.IsNullOrEmpty(msg))
+    {
+        <div class="text-success mt-2">@msg</div>
+    }
+}
+
+@code {
+    UsersService.UserDto? me;
+
+    // ⬇️ SIN ctor, inicializador vacío
+    UsersService.UserUpsertDto form = new();
+
+    string? msg;
+
+    protected override async Task OnInitializedAsync()
+    {
+        me = await UsersSvc.GetMeAsync();
+        if (me is not null)
+        {
+            form = new()
+            {
+                Nombre = me.Nombre,
+                Email = me.Email,
+                Rol = me.Rol,
+                ImagenUrl = me.ImagenUrl,
+                Activo = me.Activo,
+                Password = null
+            };
+        }
+    }
+
+    async Task Save()
+    {
+        msg = null;
+        if (await UsersSvc.UpdateMeAsync(form)) msg = "Guardado ✔";
+    }
+}

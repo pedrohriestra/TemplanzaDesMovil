@@ -1,0 +1,57 @@
+﻿@page "/login"
+@inject AuthService Auth
+@inject NavigationManager Nav
+
+<h3 class="mb-3">Ingresar</h3>
+
+<div class="mb-2">
+    <input class="form-control" @bind="email" placeholder="Email" />
+</div>
+<div class="mb-2">
+    <input class="form-control" @bind="password" placeholder="Password" type="password" />
+</div>
+
+<button class="btn btn-primary" @onclick="DoLogin" disabled="@isBusy">
+    @if (isBusy) { <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> }
+    <span class="ms-1">Login</span>
+</button>
+
+@if (!string.IsNullOrEmpty(error))
+{
+    <div class="text-danger mt-2">@error</div>
+}
+
+@code {
+    string email = "";
+    string password = "";
+    string? error;
+    bool isBusy;
+
+    async Task DoLogin()
+    {
+        error = null;
+        isBusy = true;
+        try
+        {
+            // usa el nuevo helper que devuelve mensaje
+            var msg = await Auth.LoginWithMessageAsync(email, password);
+            if (string.IsNullOrEmpty(msg))
+            {
+                // login OK
+                Nav.NavigateTo("/blends", forceLoad: true);
+            }
+            else
+            {
+                error = msg;
+            }
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+}

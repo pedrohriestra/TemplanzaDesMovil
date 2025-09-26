@@ -1,6 +1,6 @@
 ﻿using Foundation;
 
-namespace Templanza.Mobile
+namespace Templanza.Mobile.Services
 {
     [Register("AppDelegate")]
     public class AppDelegate : MauiUIApplicationDelegate
