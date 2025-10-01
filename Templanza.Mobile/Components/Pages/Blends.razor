@@ -1,5 +1,7 @@
 ﻿@page "/blends"
 @inject BlendsService BlendsSvc
+@inject AuthService Auth
+@inject IJSRuntime js
 
 <h3>Blends</h3>
 
@@ -9,63 +11,171 @@
 }
 else
 {
-    <div class="row row-cols-1 row-cols-md-3 g-3">
-        @foreach (var b in items)
+    <div class="mb-3">
+        @if (isAdmin)
         {
-            <div class="col">
-                <div class="card h-100">
-                    <img class="card-img-top" src="@b.ImagenUrl" alt="img" />
-                    <div class="card-body">
-                        <h5 class="card-title">@b.Nombre</h5>
-                        <p class="card-text">@b.Tipo · $@b.Precio · Stock: @b.Stock</p>
-                    </div>
-                    <div class="card-footer">
-                        <button class="btn btn-outline-danger btn-sm" @onclick="() => Delete(b.Id)">Eliminar</button>
-                    </div>
-                </div>
-            </div>
+            <span class="badge bg-success">Modo Admin</span>
+        }
+        else
+        {
+            <span class="badge bg-secondary">Modo Usuario</span>
         }
     </div>
 
+    <!-- DATATABLE -->
+    <table class="table table-striped table-bordered">
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Nombre</th>
+                <th>Tipo</th>
+                <th class="text-end">Precio</th>
+                <th class="text-end">Stock</th>
+                <th>Imagen</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var b in items)
+            {
+                <tr>
+                    <td>@b.Id</td>
+                    <td>@b.Nombre</td>
+                    <td>@b.Tipo</td>
+                    <td class="text-end">@String.Format("{0:N2}", b.Precio)</td>
+                    <td class="text-end">@b.Stock</td>
+                    <td style="width:120px">
+                        @if (!string.IsNullOrWhiteSpace(b.ImagenUrl))
+                        {
+                            <img src="@b.ImagenUrl" style="max-height:48px;max-width:110px;object-fit:cover" />
+                        }
+                    </td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => StartEdit(b.Id)">Editar</button>
+                        @if (isAdmin)
+                        {
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => Delete(b.Id)">Eliminar</button>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
     <hr />
-    <h5>Nuevo</h5>
-    <input class="form-control mb-1" @bind="nuevo.Nombre" placeholder="Nombre" />
-    <input class="form-control mb-1" @bind="nuevo.Tipo" placeholder="Tipo" />
-    <input class="form-control mb-1" type="number" @bind="nuevo.Precio" placeholder="Precio" />
-    <input class="form-control mb-1" type="number" @bind="nuevo.Stock" placeholder="Stock" />
-    <input class="form-control mb-2" @bind="nuevo.ImagenUrl" placeholder="Imagen URL" />
-    <button class="btn btn-success" @onclick="Create">Crear</button>
-    @if (err != null)
+
+    @* Form para crear/editar (solo visible a Admin para crear; para editar permitimos abrir desde btn Edit para Admins también) *@
+    @if (isAdmin)
     {
-        <div class="text-danger mt-2">@err</div>
+        <h5>@(editingId == 0 ? "Nuevo Blend" : $"Editar Blend #{editingId}")</h5>
+
+        <div class="row g-2">
+            <div class="col-md-4"><input class="form-control" placeholder="Nombre" @bind="form.Nombre" /></div>
+            <div class="col-md-2"><input class="form-control" placeholder="Tipo" @bind="form.Tipo" /></div>
+            <div class="col-md-2"><input class="form-control" type="number" placeholder="Precio" @bind="form.Precio" /></div>
+            <div class="col-md-2"><input class="form-control" type="number" placeholder="Stock" @bind="form.Stock" /></div>
+            <div class="col-md-2"><input class="form-control" placeholder="Imagen URL" @bind="form.ImagenUrl" /></div>
+        </div>
+
+        <div class="mt-2 text-end">
+            <button class="btn btn-success me-2" @onclick="SaveAsync">@(editingId == 0 ? "Crear" : "Guardar")</button>
+            @if (editingId != 0)
+            {
+                <button class="btn btn-outline-secondary" @onclick="CancelEdit">Cancelar</button>
+            }
+        </div>
+
+        @if (!string.IsNullOrEmpty(err))
+        {
+            <div class="text-danger mt-2">@err</div>
+        }
+    }
+    else
+    {
+        <div class="alert alert-info">Solo los administradores pueden crear o editar blends.</div>
     }
 }
 
 @code {
     List<Templanza.Domain.Blend>? items;
-    Templanza.Domain.Blend nuevo = new();
+    Templanza.Domain.Blend form = new();
     string? err;
+    bool isAdmin = false;
+    int editingId = 0;
 
     protected override async Task OnInitializedAsync()
     {
+        // comprobar si es admin
+        isAdmin = await Auth.IsAdminAsync();
         items = await BlendsSvc.GetAllAsync() ?? [];
     }
 
-    async Task Create()
+    async Task StartEdit(int id)
     {
         err = null;
-        if (await BlendsSvc.CreateAsync(nuevo))
+        editingId = id;
+        var b = await BlendsSvc.GetByIdAsync(id);
+        if (b is not null)
+        {
+            form = new Templanza.Domain.Blend
+            {
+                Id = b.Id,
+                Nombre = b.Nombre,
+                Tipo = b.Tipo,
+                Precio = b.Precio,
+                Stock = b.Stock,
+                ImagenUrl = b.ImagenUrl
+            };
+        }
+        else
+        {
+            err = "No se encontró el blend para editar.";
+        }
+    }
+
+    void CancelEdit()
+    {
+        editingId = 0;
+        form = new Templanza.Domain.Blend();
+    }
+
+    async Task SaveAsync()
+    {
+        err = null;
+        bool ok = false;
+        if (editingId == 0)
+        {
+            ok = await BlendsSvc.CreateAsync(form);
+        }
+        else
+        {
+            ok = await BlendsSvc.UpdateAsync(editingId, form);
+        }
+
+        if (ok)
         {
             items = await BlendsSvc.GetAllAsync() ?? [];
-            nuevo = new();
+            CancelEdit();
         }
-        else err = "Necesitás token de Admin para crear";
+        else
+        {
+            err = editingId == 0 ? "Necesitás token de Admin para crear" : "Necesitás token de Admin para editar";
+        }
     }
 
     async Task Delete(int id)
     {
+        // confirmación
+        var ok = await js.InvokeAsync<bool>("confirm", $"¿Querés eliminar el blend #{id}? Esta acción no se puede deshacer.");
+        if (!ok) return;
+
         if (await BlendsSvc.DeleteAsync(id))
+        {
             items = await BlendsSvc.GetAllAsync() ?? [];
-        else err = "Necesitás token de Admin para eliminar";
+        }
+        else
+        {
+            err = "Necesitás token de Admin para eliminar";
+        }
     }
 }

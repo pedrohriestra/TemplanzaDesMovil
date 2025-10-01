@@ -2,7 +2,7 @@
 @inject AuthService Auth
 @inject NavigationManager Nav
 
-<h3 class="mb-3">Ingresar</h3>
+<h3 class="mb-3">Ingresar / Registrar</h3>
 
 <div class="mb-2">
     <input class="form-control" @bind="email" placeholder="Email" />
@@ -11,47 +11,104 @@
     <input class="form-control" @bind="password" placeholder="Password" type="password" />
 </div>
 
-<button class="btn btn-primary" @onclick="DoLogin" disabled="@isBusy">
-    @if (isBusy) { <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> }
-    <span class="ms-1">Login</span>
-</button>
-
-@if (!string.IsNullOrEmpty(error))
+@if (mode == Mode.Register)
 {
-    <div class="text-danger mt-2">@error</div>
+    <div class="mb-2">
+        <input class="form-control" @bind="nombre" placeholder="Nombre" />
+    </div>
+}
+
+<div class="mb-3">
+    <button class="btn btn-outline-secondary me-2" @onclick="() => mode = Mode.Login" disabled="@(mode == Mode.Login)">Login</button>
+    <button class="btn btn-outline-secondary" @onclick="() => mode = Mode.Register" disabled="@(mode == Mode.Register)">Register</button>
+</div>
+
+@if (mode == Mode.Login)
+{
+    <button class="btn btn-primary" @onclick="DoLogin" disabled="@isBusy">
+        @if (isBusy)
+        {
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        }
+        <span class="ms-1">Login</span>
+    </button>
+}
+else
+{
+    <button class="btn btn-success" @onclick="DoRegister" disabled="@isBusy">
+        @if (isBusy)
+        {
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        }
+        <span class="ms-1">Registrar</span>
+    </button>
+}
+
+@if (!string.IsNullOrEmpty(message))
+{
+    <div class="@msgClass mt-2">@message</div>
 }
 
 @code {
+    enum Mode { Login, Register }
+    Mode mode = Mode.Login;
+
+    string nombre = "";
     string email = "";
     string password = "";
-    string? error;
+    string? message;
+    string msgClass = "text-danger";
     bool isBusy;
 
     async Task DoLogin()
     {
-        error = null;
+        message = null;
         isBusy = true;
         try
         {
-            // usa el nuevo helper que devuelve mensaje
             var msg = await Auth.LoginWithMessageAsync(email, password);
             if (string.IsNullOrEmpty(msg))
             {
-                // login OK
                 Nav.NavigateTo("/blends", forceLoad: true);
             }
             else
             {
-                error = msg;
+                message = msg;
+                msgClass = "text-danger";
             }
         }
         catch (Exception ex)
         {
-            error = ex.Message;
+            message = "Error inesperado.";
+            msgClass = "text-danger";
         }
-        finally
+        finally { isBusy = false; }
+    }
+
+    async Task DoRegister()
+    {
+        message = null;
+        isBusy = true;
+        try
         {
-            isBusy = false;
+            var msg = await Auth.RegisterAsync(nombre, email, password);
+            if (string.IsNullOrEmpty(msg))
+            {
+                message = "Registro ok. Podés loguearte.";
+                msgClass = "text-success";
+                mode = Mode.Login;
+            }
+            else
+            {
+                message = msg;
+                msgClass = "text-danger";
+            }
         }
+        catch (Exception ex)
+        {
+            message = "Error inesperado al registrar.";
+            msgClass = "text-danger";
+        }
+        finally { isBusy = false; }
     }
 }

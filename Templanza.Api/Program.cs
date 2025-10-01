@@ -1,76 +1,79 @@
+﻿using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using System.Text;
+using Microsoft.OpenApi.Models;
 using Templanza.Api.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
-builder.Services.AddOpenApi();
-builder.Services.AddEndpointsApiExplorer();
-// antes de builder.Build()
-builder.Services.AddCors(o =>
-{
-    o.AddPolicy("AllowAll", p => p
-        .AllowAnyOrigin()
-        .AllowAnyMethod()
-        .AllowAnyHeader());
-});
-builder.Services.AddSwaggerGen(c =>
-{
-    c.SwaggerDoc("v1", new() { Title = "Templanza.Api", Version = "v1" });
+// Cargar clave JWT
+var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("Jwt:Key faltante");
 
-    var scheme = new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-    {
-        Name = "Authorization",
-        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
-        Scheme = "bearer",
-        BearerFormat = "JWT",
-        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-        Description = "Ingrese: Bearer {token}"
-    };
-    c.AddSecurityDefinition("Bearer", scheme);
-    c.AddSecurityRequirement(new()
-    {
-        [scheme] = Array.Empty<string>()
-    });
-});
-
-// EF Core
+// DB (cambia a Somee en appsettings)
 builder.Services.AddDbContext<AppDbContext>(opt =>
     opt.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
 
-// JWT
-var key = Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!);
-builder.Services.AddAuthentication("Bearer")
-    .AddJwtBearer("Bearer", opt =>
+builder.Services.AddControllers();
+
+// CORS abierto (ajusta luego para prod)
+builder.Services.AddCors(o => o.AddPolicy("Dev",
+    p => p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
+
+// **AUTH JWT**
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
     {
-        opt.TokenValidationParameters = new()
+        options.RequireHttpsMetadata = false; // en Somee usás HTTPS real, en local podés dejar false
+        options.SaveToken = true;
+        options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = false,
             ValidateAudience = false,
-            ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(key)
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+            ClockSkew = TimeSpan.Zero
         };
     });
+
 builder.Services.AddAuthorization();
+
+// **Swagger con Bearer**
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "Templanza.Api", Version = "v1" });
+    var securityScheme = new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Description = "Bearer {tu_jwt}",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
+    };
+    c.AddSecurityDefinition("Bearer", securityScheme);
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        { securityScheme, Array.Empty<string>() }
+    });
+});
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+// CORS
+app.UseCors("Dev");
 
-app.UseCors("AllowAll");
+// Swagger (Somee también lo sirve ok en HTTPS)
+app.UseSwagger();
+app.UseSwaggerUI();
 
-app.UseHttpsRedirection();
-
-app.UseAuthentication();   // << IMPORTANTE: primero auth
-app.UseAuthorization();    // luego authorization
+// **Orden correcto**
+// (no redirigimos a HTTPS nosotros; Somee ya te pone HTTPS delante)
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllers();
+
 app.Run();
