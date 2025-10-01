@@ -63,8 +63,28 @@ public class UsersService
     public async Task<UserDto?> GetMeAsync()
     {
         await _auth.RestoreTokenAsync();
-        return await _http.GetFromJsonAsync<UserDto>("api/usuarios/me");
+
+        try
+        {
+            var res = await _http.GetAsync("api/usuarios/me");
+            if (res.IsSuccessStatusCode)
+            {
+                return await res.Content.ReadFromJsonAsync<UserDto>();
+            }
+            else
+            {
+                var body = await res.Content.ReadAsStringAsync();
+                Console.WriteLine($"GetMeAsync failed: {(int)res.StatusCode} {res.ReasonPhrase} - {body}");
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"GetMeAsync exception: {ex}");
+            return null;
+        }
     }
+
 
     public async Task<bool> UpdateMeAsync(UserUpsertDto dto)
     {

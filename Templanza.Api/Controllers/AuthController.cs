@@ -10,7 +10,7 @@ using Templanza.Domain;
 
 namespace Templanza.Api.Controllers;
 
-public record RegisterDto(string Email, string Password);
+public record RegisterDto(string Email, string Password, string? Nombre);
 public record LoginDto(string Email, string Password);
 public record TokenDto(string Token);
 
@@ -38,9 +38,10 @@ public class AuthController : ControllerBase
         var u = new Usuario
         {
             Email = dto.Email,
+            Nombre = dto.Nombre, // <- ahora guardamos el nombre
             PasswordHash = hash,
             PasswordSalt = salt,
-            Rol = isFirstUser ? RolUsuario.Admin : RolUsuario.Usuario   // <<< clave
+            Rol = isFirstUser ? RolUsuario.Admin : RolUsuario.Usuario
         };
         _db.Usuarios.Add(u);
         await _db.SaveChangesAsync();

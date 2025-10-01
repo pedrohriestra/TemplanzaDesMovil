@@ -1,6 +1,7 @@
 ﻿@page "/users"
 @inject UsersService UsersSvc
 @inject AuthService Auth
+@inject IJSRuntime js
 
 <h3>Usuarios</h3>
 
@@ -144,7 +145,11 @@ else
 
     async Task Remove(int id)
     {
+        var ok = await js.InvokeAsync<bool>("confirm", $"¿Querés eliminar el usuario #{id}?");
+        if (!ok) return;
+
         if (await UsersSvc.DeleteAsync(id))
             items = await UsersSvc.GetAllAsync() ?? [];
     }
+
 }

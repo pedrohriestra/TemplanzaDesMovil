@@ -23,7 +23,7 @@ public static class MauiProgram
             BaseAddress = new Uri(
                 DeviceInfo.Platform == DevicePlatform.Android
                     ? "https://10.0.2.2:7069/" 
-                    : "https://localhost:7069/") 
+                    : "https://localhost:7069") 
         });
 
         builder.Services.AddSingleton<AuthService>();

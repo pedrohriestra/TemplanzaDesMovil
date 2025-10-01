@@ -5,10 +5,9 @@ using Templanza.Api.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer();
-// antes de builder.Build()
+
 builder.Services.AddCors(o =>
 {
     o.AddPolicy("AllowAll", p => p
@@ -16,6 +15,9 @@ builder.Services.AddCors(o =>
         .AllowAnyMethod()
         .AllowAnyHeader());
 });
+
+builder.Services.AddControllers();
+
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new() { Title = "Templanza.Api", Version = "v1" });
