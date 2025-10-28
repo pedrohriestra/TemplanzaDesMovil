@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.Logging;
-using Microsoft.Maui.Devices;
 
 namespace Templanza.Mobile.Services;
 
@@ -17,15 +16,14 @@ public static class MauiProgram
 
         builder.Services.AddMauiBlazorWebView();
 
-        // HttpClient según plataforma (Android emulador usa el host de loopback 10.0.2.2)
+        // 🔹 HttpClient ÚNICO apuntando a Render (HTTPS válido)
         builder.Services.AddSingleton(sp => new HttpClient
         {
-            BaseAddress = new Uri(
-                DeviceInfo.Platform == DevicePlatform.Android
-                    ? "https://10.0.2.2:7069/" 
-                    : "https://localhost:7069") 
+            BaseAddress = new Uri("https://templanza-api.onrender.com/"), // <- tu API pública
+            Timeout = TimeSpan.FromSeconds(30)
         });
 
+        // tus servicios (usan ese HttpClient compartido)
         builder.Services.AddSingleton<AuthService>();
         builder.Services.AddSingleton<BlendsService>();
         builder.Services.AddSingleton<UsersService>();
