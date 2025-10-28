@@ -1,9 +1,16 @@
 ﻿@page "/profile"
 @inject UsersService UsersSvc
+@inject AuthService Auth
 
 <h3>Mi cuenta</h3>
 
-@if (me is null)
+@if (!loggedIn)
+{
+    <div class="alert alert-warning">
+        Debés <a href="login">iniciar sesión</a> para ver tu perfil.
+    </div>
+}
+else if (me is null)
 {
     <p>Cargando...</p>
 }
@@ -27,15 +34,17 @@ else
 }
 
 @code {
+    bool loggedIn = false;
     UsersService.UserDto? me;
-
-    // ⬇️ SIN ctor, inicializador vacío
     UsersService.UserUpsertDto form = new();
-
     string? msg;
 
     protected override async Task OnInitializedAsync()
     {
+        var t = await SecureStorage.GetAsync("jwt");
+        loggedIn = !string.IsNullOrWhiteSpace(t);
+        if (!loggedIn) return;
+
         me = await UsersSvc.GetMeAsync();
         if (me is not null)
         {
@@ -43,10 +52,9 @@ else
             {
                 Nombre = me.Nombre,
                 Email = me.Email,
-                Rol = me.Rol,
                 ImagenUrl = me.ImagenUrl,
-                Activo = me.Activo,
-                Password = null
+                Rol = me.Rol,
+                Activo = me.Activo
             };
         }
     }
@@ -54,6 +62,7 @@ else
     async Task Save()
     {
         msg = null;
-        if (await UsersSvc.UpdateMeAsync(form)) msg = "Guardado ✔";
+        if (await UsersSvc.UpdateMeAsync(form))
+            msg = "Guardado ✔";
     }
 }

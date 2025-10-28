@@ -1,3 +1,40 @@
 ﻿@page "/"
-<h3>Templanza</h3>
-<p>Bienvenido. Usá el menú para navegar.</p>
+@inject BlendsService BlendsSvc
+
+<h3 class="mb-3">Nuestros Blends</h3>
+
+@if (items is null)
+{
+    <p>Cargando...</p>
+}
+else if (items.Count == 0)
+{
+    <p>No hay blends disponibles.</p>
+}
+else
+{
+    <div class="row row-cols-1 row-cols-md-3 g-3">
+        @foreach (var b in items)
+        {
+            <div class="col">
+                <div class="card shadow-sm h-100">
+                    <img src="@b.ImagenUrl" class="card-img-top" style="object-fit:cover; height:180px" />
+                    <div class="card-body">
+                        <h5 class="card-title">@b.Nombre</h5>
+                        <p class="card-text text-muted">@b.Tipo</p>
+                        <p class="fw-bold">$@b.Precio.ToString("N2")</p>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    List<Templanza.Domain.Blend>? items;
+
+    protected override async Task OnInitializedAsync()
+    {
+        items = await BlendsSvc.GetAllAsync() ?? [];
+    }
+}

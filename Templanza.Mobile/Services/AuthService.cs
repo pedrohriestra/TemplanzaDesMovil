@@ -58,11 +58,11 @@ public class AuthService
     }
 
     // ---- REGISTER ----
-    public async Task<string> RegisterAsync(string email, string password)
+    public async Task<string> RegisterAsync(string nombre, string email, string password)
     {
         try
         {
-            var res = await _http.PostAsJsonAsync("api/auth/register", new { email, password });
+            var res = await _http.PostAsJsonAsync("api/auth/register", new { nombre, email, password});
             if (res.IsSuccessStatusCode) return string.Empty;
 
             if (res.StatusCode == HttpStatusCode.BadRequest)
