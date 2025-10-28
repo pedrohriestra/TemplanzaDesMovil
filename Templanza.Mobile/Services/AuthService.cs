@@ -1,7 +1,6 @@
-﻿using System.Net.Http.Json;
+﻿using System.Net;
+using System.Net.Http.Json;
 using System.Text;
-using System;
-using System.Diagnostics;
 
 namespace Templanza.Mobile.Services;
 
@@ -10,89 +9,82 @@ public class AuthService
     private readonly HttpClient _http;
     public AuthService(HttpClient http) => _http = http;
 
-    // Método «tradicional» (mantener compatibilidad)
+    // ---- LOGIN ----
     public async Task<bool> LoginAsync(string email, string password)
     {
         var msg = await LoginWithMessageAsync(email, password);
         return string.IsNullOrEmpty(msg);
     }
 
-    // Devuelve string vacío si OK, o mensaje de error si falla
-    // dentro de AuthService (Mobile)
+    // Devuelve "" si OK; si falla, mensaje para mostrar en UI
     public async Task<string> LoginWithMessageAsync(string email, string password)
     {
         try
         {
-            Console.WriteLine($"AuthService: login attempt for {email}");
+            var res = await _http.PostAsJsonAsync("api/auth/login", new { email, password });
 
-            var res = await _http.PostAsJsonAsync("api/auth/login", new { Email = email, Password = password });
-            if (!res.IsSuccessStatusCode)
+            if (res.IsSuccessStatusCode)
             {
-                var body = await res.Content.ReadAsStringAsync();
+                var json = await res.Content.ReadFromJsonAsync<TokenDto>();
+                if (json == null || string.IsNullOrWhiteSpace(json.Token))
+                    return "El servidor no devolvió token.";
 
-                if (res.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-                {
-                    Console.WriteLine("AuthService: login failed: Unauthorized");
-                    return "Usuario o contraseña incorrectos.";
-                }
-
-                if (res.StatusCode == System.Net.HttpStatusCode.BadRequest)
-                {
-                    // Si el backend devuelve un body con detalles, usa eso; si no, mensaje genérico
-                    var detail = string.IsNullOrWhiteSpace(body) ? "Solicitud inválida." : body;
-                    Console.WriteLine($"AuthService: login bad request: {detail}");
-                    return detail;
-                }
-
-                // otros errores
-                var err = $"Error del servidor ({(int)res.StatusCode}).";
-                Console.WriteLine($"AuthService: login failed: {err} {body}");
-                return $"{err} Intentá de nuevo más tarde.";
+                await SecureStorage.SetAsync("jwt", json.Token);
+                _http.DefaultRequestHeaders.Authorization = new("Bearer", json.Token);
+                return string.Empty;
             }
 
-            var json = await res.Content.ReadFromJsonAsync<TokenDto>();
-            if (json == null || string.IsNullOrWhiteSpace(json.Token))
+            // Manejo de errores comunes
+            if (res.StatusCode == HttpStatusCode.Unauthorized)
+                return "Credenciales inválidas (email o contraseña).";
+
+            if (res.StatusCode == HttpStatusCode.BadRequest)
             {
-                Console.WriteLine("AuthService: token missing in response");
-                return "El servidor no devolvió token.";
+                var body = await SafeReadAsync(res);
+                return string.IsNullOrWhiteSpace(body) ? "Solicitud inválida." : body;
             }
 
-            await SecureStorage.SetAsync("jwt", json.Token);
-            _http.DefaultRequestHeaders.Authorization = new("Bearer", json.Token);
-            Console.WriteLine("AuthService: login ok, token guardado");
-            return string.Empty;
+            var fallback = await SafeReadAsync(res);
+            return $"Error {(int)res.StatusCode}: {res.ReasonPhrase}. {fallback}";
+        }
+        catch (HttpRequestException)
+        {
+            return "No se pudo conectar con la API (revisá tu red o que el servidor esté arriba).";
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"AuthService: exception in Login: {ex}");
-            Debug.WriteLine($"AuthService: exception in Login: {ex}");
-            // mensaje amigable
-            return $"{ex}";
+            return $"Error inesperado: {ex.Message}";
         }
     }
 
-    public async Task<string> RegisterAsync(string nombre, string email, string password)
+    // ---- REGISTER ----
+    public async Task<string> RegisterAsync(string email, string password)
     {
         try
         {
-            var payload = new { Email = email, Password = password, Nombre = nombre };
-            var res = await _http.PostAsJsonAsync("api/auth/register", payload);
+            var res = await _http.PostAsJsonAsync("api/auth/register", new { email, password });
             if (res.IsSuccessStatusCode) return string.Empty;
 
-            var body = await res.Content.ReadAsStringAsync();
-            if (res.StatusCode == System.Net.HttpStatusCode.BadRequest && !string.IsNullOrWhiteSpace(body))
-                return body;
+            if (res.StatusCode == HttpStatusCode.BadRequest)
+            {
+                var body = await SafeReadAsync(res);
+                if (!string.IsNullOrWhiteSpace(body) &&
+                    body.Contains("Email", StringComparison.OrdinalIgnoreCase))
+                    return "Ese email ya está registrado.";
+                return string.IsNullOrWhiteSpace(body) ? "Datos inválidos para el registro." : body;
+            }
 
-            return $"Error ({(int)res.StatusCode}) al registrar.";
+            return $"Error {(int)res.StatusCode}: {res.ReasonPhrase}";
+        }
+        catch (HttpRequestException)
+        {
+            return "No se pudo conectar con la API para registrar.";
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Register exception: {ex}");
-            return "Error de conexión al registrar.";
+            return $"Error inesperado: {ex.Message}";
         }
     }
-
-
 
     public async Task RestoreTokenAsync()
     {
@@ -102,10 +94,7 @@ public class AuthService
             if (!string.IsNullOrWhiteSpace(t))
                 _http.DefaultRequestHeaders.Authorization = new("Bearer", t);
         }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"AuthService.RestoreTokenAsync exception: {ex.Message}");
-        }
+        catch { /* noop */ }
     }
 
     public async Task LogoutAsync()
@@ -115,10 +104,13 @@ public class AuthService
             await SecureStorage.SetAsync("jwt", "");
             _http.DefaultRequestHeaders.Authorization = null;
         }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"AuthService.LogoutAsync exception: {ex.Message}");
-        }
+        catch { /* noop */ }
+    }
+
+    private static async Task<string> SafeReadAsync(HttpResponseMessage res)
+    {
+        try { return await res.Content.ReadAsStringAsync(); }
+        catch { return ""; }
     }
 
     private record TokenDto(string Token);
@@ -139,7 +131,7 @@ public class AuthService
         return int.TryParse(idStr, out var id) ? id : null;
     }
 
-    // ---------- helpers ----------
+    // ---------- helpers JWT ----------
     private string? GetClaim(string key)
     {
         var auth = _http.DefaultRequestHeaders.Authorization;
