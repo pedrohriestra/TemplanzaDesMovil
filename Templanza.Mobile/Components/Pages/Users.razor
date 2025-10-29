@@ -3,6 +3,10 @@
 @inject AuthService Auth
 @inject IJSRuntime js
 
+<HeadContent>
+    <link rel="stylesheet" href="css/users.css" />
+</HeadContent>
+
 <h3>Usuarios</h3>
 
 @if (!isAdmin)
@@ -15,10 +19,12 @@ else if (items is null)
 }
 else
 {
-    <table class="table table-sm align-middle">
+    <div class="table-responsive">
+    <table class="table table-sm align-middle w-100">
         <thead>
             <tr>
                 <th>Id</th>
+                <th>Foto</th>
                 <th>Nombre</th>
                 <th>Email</th>
                 <th>Rol</th>
@@ -31,6 +37,14 @@ else
             {
                 <tr>
                     <td>@u.Id</td>
+                    <td>
+                        @if (!string.IsNullOrWhiteSpace(u.ImagenUrl))
+                        {
+                            <img src="@u.ImagenUrl"
+                                 onerror="this.onerror=null;this.src='images/avatar.png';"
+                                 class="user-thumb" />
+                        }
+                    </td>
                     <td>@u.Nombre</td>
                     <td>@u.Email</td>
                     <td>@u.Rol</td>
@@ -42,7 +56,9 @@ else
                 </tr>
             }
         </tbody>
+
     </table>
+    </div>
 
     <hr />
     <h5>@(editingId == 0 ? "Nuevo usuario" : $"Editar #{editingId}")</h5>

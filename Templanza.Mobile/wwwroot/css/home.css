@@ -1,0 +1,5 @@
+﻿/* Home */
+.home-card__img {
+    object-fit: cover;
+    height: 180px;
+}

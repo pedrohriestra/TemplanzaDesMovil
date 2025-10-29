@@ -1,7 +1,11 @@
 ﻿@inherits LayoutComponentBase
-<div class="container-fluid p-0">
-  <NavMenu />
-  <div class="container py-3">
-    @Body
-  </div>
-</div>
+@using Templanza.Mobile.Components.Layout
+
+<main class="app-main container-fluid px-3">
+    <div class="app-glass">
+        @Body
+    </div>
+</main>
+
+<div class="page-spacer"></div>   <!-- espacio para scrollear -->
+<NavMenu />

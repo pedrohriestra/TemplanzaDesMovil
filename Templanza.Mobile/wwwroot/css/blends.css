@@ -1,0 +1,14 @@
+﻿/* card de Home ya estaba */
+.home-card__img {
+    object-fit: cover;
+    height: 180px;
+}
+
+/* thumbs tabla */
+.thumb-sm {
+    width: 84px;
+    height: 48px;
+    object-fit: cover;
+    border-radius: 8px;
+    display: block;
+}

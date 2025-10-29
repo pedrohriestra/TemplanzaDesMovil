@@ -1,6 +1,10 @@
 ﻿@page "/"
 @inject BlendsService BlendsSvc
 
+<HeadContent>
+    <link rel="stylesheet" href="css/home.css" />
+</HeadContent>
+
 <h3 class="mb-3">Nuestros Blends</h3>
 
 @if (items is null)
@@ -18,7 +22,7 @@ else
         {
             <div class="col">
                 <div class="card shadow-sm h-100">
-                    <img src="@b.ImagenUrl" class="card-img-top" style="object-fit:cover; height:180px" />
+                    <img src="@b.ImagenUrl" class="card-img-top home-card__img" />
                     <div class="card-body">
                         <h5 class="card-title">@b.Nombre</h5>
                         <p class="card-text text-muted">@b.Tipo</p>
@@ -32,9 +36,6 @@ else
 
 @code {
     List<Templanza.Domain.Blend>? items;
-
     protected override async Task OnInitializedAsync()
-    {
-        items = await BlendsSvc.GetAllAsync() ?? [];
-    }
+        => items = await BlendsSvc.GetAllAsync() ?? [];
 }

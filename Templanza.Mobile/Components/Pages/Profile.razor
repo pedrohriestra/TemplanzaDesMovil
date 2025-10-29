@@ -2,6 +2,10 @@
 @inject UsersService UsersSvc
 @inject NavigationManager Nav
 
+<HeadContent>
+    <link rel="stylesheet" href="css/profile.css" />
+</HeadContent>
+
 <h3>Mi cuenta</h3>
 
 @if (notLogged)
@@ -21,34 +25,22 @@ else
             <div class="d-flex align-items-center gap-3 mb-3">
                 <img src="@GetImg(form.ImagenUrl)"
                      onerror="this.onerror=null;this.src='images/avatar.png';"
-                     class="rounded-circle border"
-                     style="width:72px;height:72px;object-fit:cover;" />
-
+                     class="rounded-circle border profile__avatar" />
                 <div>
                     <div class="fw-semibold">@me.Nombre</div>
-                    <div class="text-muted" style="font-size:.9rem">@me.Email</div>
+                    <div class="text-muted profile__email">@me.Email</div>
                 </div>
             </div>
 
             <div class="row g-2">
-                <div class="col-md-4">
-                    <input class="form-control" @bind="form.Nombre" placeholder="Nombre" />
-                </div>
-                <div class="col-md-4">
-                    <input class="form-control" @bind="form.Email" placeholder="Email" />
-                </div>
-                <div class="col-md-4">
-                    <input class="form-control" @bind="form.ImagenUrl" placeholder="Imagen URL (https://... .jpg)" />
-                </div>
+                <div class="col-md-4"><input class="form-control" @bind="form.Nombre" placeholder="Nombre" /></div>
+                <div class="col-md-4"><input class="form-control" @bind="form.Email" placeholder="Email" /></div>
+                <div class="col-md-4"><input class="form-control" @bind="form.ImagenUrl" placeholder="Imagen URL (https://... .jpg)" /></div>
             </div>
 
             <div class="row g-2 mt-2">
-                <div class="col-md-6">
-                    <input class="form-control" @bind="form.Password" placeholder="Password (opcional)" />
-                </div>
-                <div class="col-md-6 text-end">
-                    <button class="btn btn-success" @onclick="Save">Guardar cambios</button>
-                </div>
+                <div class="col-md-6"><input class="form-control" @bind="form.Password" placeholder="Password (opcional)" /></div>
+                <div class="col-md-6 text-end"><button class="btn btn-success" @onclick="Save">Guardar cambios</button></div>
             </div>
 
             @if (!string.IsNullOrEmpty(msg))
