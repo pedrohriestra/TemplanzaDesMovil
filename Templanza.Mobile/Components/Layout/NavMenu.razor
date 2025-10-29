@@ -2,38 +2,41 @@
 @inject AuthService Auth
 @inject NavigationManager Nav
 
-<nav class="navbar navbar-dark bg-dark justify-content-around py-2">
-    <NavLink class="nav-link text-white" href="" Match="NavLinkMatch.All">
-        <i class="bi bi-house fs-4"></i>
-    </NavLink>
+<nav class="navbar navbar-dark bg-dark navbar-expand fixed-bottom py-1 border-top">
+    <div class="container-fluid justify-content-around">
 
-    <NavLink class="nav-link text-white" href="blends">
-        <i class="bi bi-basket fs-4"></i>
-    </NavLink>
-
-    <NavLink class="nav-link text-white" href="profile">
-        <i class="bi bi-person-badge fs-4"></i>
-    </NavLink>
-
-    @if (isAdmin)
-    {
-        <NavLink class="nav-link text-white" href="users">
-            <i class="bi bi-people fs-4"></i>
+        <NavLink class="nav-link text-center text-light" href="" Match="NavLinkMatch.All">
+            <i class="bi bi-house fs-4"></i>
         </NavLink>
-    }
 
-    @if (loggedIn)
-    {
-        <button class="btn btn-outline-light btn-sm" @onclick="DoLogout">
-            <i class="bi bi-box-arrow-right fs-5"></i>
-        </button>
-    }
-    else
-    {
-        <NavLink class="btn btn-outline-light btn-sm" href="login">
-            <i class="bi bi-person fs-5"></i>
+        <NavLink class="nav-link text-center text-light" href="blends">
+            <i class="bi bi-basket fs-4"></i>
         </NavLink>
-    }
+
+        <NavLink class="nav-link text-center text-light" href="profile">
+            <i class="bi bi-person-badge fs-4"></i>
+        </NavLink>
+
+        @if (isAdmin)
+        {
+            <NavLink class="nav-link text-center text-light" href="users">
+                <i class="bi bi-people fs-4"></i>
+            </NavLink>
+        }
+
+        @if (loggedIn)
+        {
+            <button class="btn btn-link nav-link text-center text-light" @onclick="DoLogout">
+                <i class="bi bi-box-arrow-right fs-4"></i>
+            </button>
+        }
+        else
+        {
+            <NavLink class="nav-link text-center text-light" href="login">
+                <i class="bi bi-person fs-4"></i>
+            </NavLink>
+        }
+    </div>
 </nav>
 
 @code {
