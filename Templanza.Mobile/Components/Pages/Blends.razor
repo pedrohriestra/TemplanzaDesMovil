@@ -1,45 +1,174 @@
 ﻿@page "/blends"
 @inject BlendsService BlendsSvc
 @inject AuthService Auth
+@inject IJSRuntime js
 
 <h3>Blends</h3>
 
-@if (items == null)
+@if (items is null)
 {
     <p>Cargando...</p>
 }
 else
 {
-    <div class="row row-cols-1 row-cols-md-3 g-3">
-        @foreach (var b in items)
-        {
-            <div class="col">
-                <div class="card shadow-sm h-100">
-                    <img src="@b.ImagenUrl" class="card-img-top" style="object-fit:cover; height:160px" />
-                    <div class="card-body">
-                        <h5 class="card-title">@b.Nombre</h5>
-                        <p class="text-muted">@b.Tipo</p>
-                        <p class="fw-bold">$@b.Precio.ToString("N2")</p>
-                    </div>
-                </div>
-            </div>
-        }
-    </div>
+    <table class="table table-sm align-middle">
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Nombre</th>
+                <th>Tipo</th>
+                <th class="text-end">Precio</th>
+                <th class="text-end">Stock</th>
+                <th style="width:100px">Imagen</th>
+                @if (isAdmin)
+                {
+                    <th class="text-end"></th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var b in items)
+            {
+                <tr>
+                    <td>@b.Id</td>
+                    <td>@b.Nombre</td>
+                    <td>@b.Tipo</td>
+                    <td class="text-end">@string.Format("{0:N2}", b.Precio)</td>
+                    <td class="text-end">@b.Stock</td>
+                    <td>
+                        @if (!string.IsNullOrWhiteSpace(b.ImagenUrl))
+                        {
+                            <img src="@b.ImagenUrl"
+                                 onerror="this.onerror=null;this.src='images/placeholder.png';"
+                                 style="height:40px;width:80px;object-fit:cover;border-radius:.25rem;" />
+                        }
+                    </td>
+                    @if (isAdmin)
+                    {
+                        <td class="text-end">
+                            <button class="btn btn-outline-secondary btn-sm me-1" @onclick="() => Edit(b)">Editar</button>
+                            <button class="btn btn-outline-danger btn-sm" @onclick="() => Remove(b.Id)">Borrar</button>
+                        </td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
 
     @if (isAdmin)
     {
         <hr />
-        <div class="alert alert-success">Modo administrador: podés editar blends desde tu panel.</div>
+        <h5>@(editingId == 0 ? "Nuevo blend" : $"Editar #{editingId}")</h5>
+
+        <div class="row g-2">
+            <div class="col-md-3">
+                <input class="form-control" placeholder="Nombre" @bind="form.Nombre" />
+            </div>
+            <div class="col-md-2">
+                <input class="form-control" placeholder="Tipo" @bind="form.Tipo" />
+            </div>
+            <div class="col-md-2">
+                <input class="form-control" type="number" step="0.01" placeholder="Precio" @bind="form.Precio" />
+            </div>
+            <div class="col-md-2">
+                <input class="form-control" type="number" placeholder="Stock" @bind="form.Stock" />
+            </div>
+            <div class="col-md-3">
+                <input class="form-control" placeholder="Imagen URL (https://... .jpg)" @bind="form.ImagenUrl" />
+            </div>
+        </div>
+
+        <div class="row g-2 mt-2">
+            <div class="col text-end">
+                <button class="btn btn-success me-2" @onclick="Save">Guardar</button>
+                <button class="btn btn-outline-secondary" @onclick="Cancel">Cancelar</button>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(err))
+        {
+            <div class="text-danger mt-2">@err</div>
+        }
+    }
+    else
+    {
+        <div class="alert alert-info">Modo usuario: solo lectura.</div>
     }
 }
 
 @code {
-    List<Templanza.Domain.Blend>? items;
     bool isAdmin;
+    List<Templanza.Domain.Blend>? items;
+    int editingId = 0;
+
+    // formulario
+    Templanza.Domain.Blend form = new()
+    {
+        Nombre = "",
+        Tipo = "",
+        Precio = 0,
+        Stock = 0,
+        ImagenUrl = ""
+    };
+
+    string? err;
 
     protected override async Task OnInitializedAsync()
     {
         isAdmin = await Auth.IsAdminAsync();
         items = await BlendsSvc.GetAllAsync() ?? [];
+    }
+
+    void Edit(Templanza.Domain.Blend b)
+    {
+        editingId = b.Id;
+        form = new()
+        {
+            Id = b.Id,
+            Nombre = b.Nombre,
+            Tipo = b.Tipo,
+            Precio = b.Precio,
+            Stock = b.Stock,
+            ImagenUrl = b.ImagenUrl
+        };
+    }
+
+    async Task Save()
+    {
+        err = null;
+        var ok = editingId == 0
+            ? await BlendsSvc.CreateAsync(form)
+            : await BlendsSvc.UpdateAsync(editingId, form);
+
+        if (ok)
+        {
+            items = await BlendsSvc.GetAllAsync() ?? [];
+            Cancel();
+        }
+        else err = "No se pudo guardar (permisos o validación).";
+    }
+
+    void Cancel()
+    {
+        editingId = 0;
+        form = new()
+        {
+            Nombre = "",
+            Tipo = "",
+            Precio = 0,
+            Stock = 0,
+            ImagenUrl = ""
+        };
+    }
+
+    async Task Remove(int id)
+    {
+        var ok = await js.InvokeAsync<bool>("confirm", $"¿Eliminar blend #{id}?");
+        if (!ok) return;
+
+        if (await BlendsSvc.DeleteAsync(id))
+            items = await BlendsSvc.GetAllAsync() ?? [];
+        else
+            err = "No se pudo eliminar (revisá permisos).";
     }
 }

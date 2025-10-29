@@ -1,13 +1,13 @@
 ﻿@page "/profile"
 @inject UsersService UsersSvc
-@inject AuthService Auth
+@inject NavigationManager Nav
 
 <h3>Mi cuenta</h3>
 
-@if (!loggedIn)
+@if (notLogged)
 {
     <div class="alert alert-warning">
-        Debés <a href="login">iniciar sesión</a> para ver tu perfil.
+        Necesitás iniciar sesión para ver tu perfil. <a class="alert-link" href="login">Ir a Login</a>
     </div>
 }
 else if (me is null)
@@ -16,53 +16,81 @@ else if (me is null)
 }
 else
 {
-    <div class="row g-2">
-        <div class="col-md-4"><input class="form-control" @bind="form.Nombre" placeholder="Nombre" /></div>
-        <div class="col-md-4"><input class="form-control" @bind="form.Email" placeholder="Email" /></div>
-        <div class="col-md-4"><input class="form-control" @bind="form.ImagenUrl" placeholder="Imagen URL" /></div>
-    </div>
-    <div class="row g-2 mt-2">
-        <div class="col-md-4"><input class="form-control" @bind="form.Password" placeholder="Password (opcional)" /></div>
-        <div class="col-md-8 text-end">
-            <button class="btn btn-success" @onclick="Save">Guardar cambios</button>
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="d-flex align-items-center gap-3 mb-3">
+                <img src="@GetImg(form.ImagenUrl)"
+                     onerror="this.onerror=null;this.src='images/avatar.png';"
+                     class="rounded-circle border"
+                     style="width:72px;height:72px;object-fit:cover;" />
+
+                <div>
+                    <div class="fw-semibold">@me.Nombre</div>
+                    <div class="text-muted" style="font-size:.9rem">@me.Email</div>
+                </div>
+            </div>
+
+            <div class="row g-2">
+                <div class="col-md-4">
+                    <input class="form-control" @bind="form.Nombre" placeholder="Nombre" />
+                </div>
+                <div class="col-md-4">
+                    <input class="form-control" @bind="form.Email" placeholder="Email" />
+                </div>
+                <div class="col-md-4">
+                    <input class="form-control" @bind="form.ImagenUrl" placeholder="Imagen URL (https://... .jpg)" />
+                </div>
+            </div>
+
+            <div class="row g-2 mt-2">
+                <div class="col-md-6">
+                    <input class="form-control" @bind="form.Password" placeholder="Password (opcional)" />
+                </div>
+                <div class="col-md-6 text-end">
+                    <button class="btn btn-success" @onclick="Save">Guardar cambios</button>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrEmpty(msg))
+            {
+                <div class="text-success mt-2">@msg</div>
+            }
         </div>
     </div>
-    @if (!string.IsNullOrEmpty(msg))
-    {
-        <div class="text-success mt-2">@msg</div>
-    }
 }
 
 @code {
-    bool loggedIn = false;
     UsersService.UserDto? me;
     UsersService.UserUpsertDto form = new();
     string? msg;
+    bool notLogged;
 
     protected override async Task OnInitializedAsync()
     {
-        var t = await SecureStorage.GetAsync("jwt");
-        loggedIn = !string.IsNullOrWhiteSpace(t);
-        if (!loggedIn) return;
-
         me = await UsersSvc.GetMeAsync();
-        if (me is not null)
+        if (me is null) { notLogged = true; return; }
+
+        form = new()
         {
-            form = new()
-            {
-                Nombre = me.Nombre,
-                Email = me.Email,
-                ImagenUrl = me.ImagenUrl,
-                Rol = me.Rol,
-                Activo = me.Activo
-            };
-        }
+            Nombre = me.Nombre,
+            Email = me.Email,
+            Rol = me.Rol,
+            ImagenUrl = me.ImagenUrl,
+            Activo = me.Activo,
+            Password = null
+        };
     }
 
     async Task Save()
     {
         msg = null;
         if (await UsersSvc.UpdateMeAsync(form))
+        {
             msg = "Guardado ✔";
+            me = await UsersSvc.GetMeAsync();
+        }
     }
+
+    string GetImg(string? url)
+        => string.IsNullOrWhiteSpace(url) ? "images/avatar.png" : url!;
 }
