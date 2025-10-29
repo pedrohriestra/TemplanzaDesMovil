@@ -69,7 +69,7 @@ else
             var msg = await Auth.LoginWithMessageAsync(email, password);
             if (string.IsNullOrEmpty(msg))
             {
-                Nav.NavigateTo("/blends", forceLoad: true);
+                Nav.NavigateTo("/", forceLoad: true);
             }
             else
             {

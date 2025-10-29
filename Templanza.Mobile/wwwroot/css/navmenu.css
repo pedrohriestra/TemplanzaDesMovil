@@ -20,7 +20,7 @@ body {
     height: var(--nav-h);
     background: #11114a;
     border-top: 1px solid rgba(255,255,255,.08);
-    z-index: 2147483647; /* 🔒 por encima de todo */
+    z-index: 2147483647;
 }
 
     /* Íconos y estados */

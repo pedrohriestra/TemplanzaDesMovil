@@ -96,7 +96,6 @@ else
     List<UsersService.UserDto>? items;
     int editingId = 0;
 
-    // ⬇️ SIN ctor: inicializador de objeto
     UsersService.UserUpsertDto form = new()
     {
         Nombre = "",
@@ -118,7 +117,6 @@ else
     void Edit(UsersService.UserDto u)
     {
         editingId = u.Id;
-        // ⬇️ copiar a mano
         form = new()
         {
             Nombre = u.Nombre,

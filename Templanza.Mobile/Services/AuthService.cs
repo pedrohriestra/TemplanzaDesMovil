@@ -127,7 +127,7 @@ public class AuthService
     public async Task<int?> GetUserIdAsync()
     {
         await RestoreTokenAsync();
-        var idStr = GetClaim("nameidentifier"); // ClaimTypes.NameIdentifier
+        var idStr = GetClaim("nameidentifier");
         return int.TryParse(idStr, out var id) ? id : null;
     }
 

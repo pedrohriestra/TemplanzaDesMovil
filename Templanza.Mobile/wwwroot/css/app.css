@@ -110,8 +110,8 @@ main.app-main {
 
 /* --- Layout full-height + espacio de deslizamiento --- */
 .app-main {
-    padding: 16px; /* ya lo tenías */
-    min-height: calc(100dvh - var(--nav-h)); /* ocupa alto menos la barra */
+    padding: 16px;
+    min-height: calc(100dvh - var(--nav-h));
 }
 
 /* espacio vacío para no quedar pegado al nav en portrait/landscape */

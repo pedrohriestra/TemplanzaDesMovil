@@ -16,14 +16,12 @@ public static class MauiProgram
 
         builder.Services.AddMauiBlazorWebView();
 
-        // 🔹 HttpClient ÚNICO apuntando a Render (HTTPS válido)
         builder.Services.AddSingleton(sp => new HttpClient
         {
-            BaseAddress = new Uri("https://templanza-api.onrender.com/"), // <- tu API pública
+            BaseAddress = new Uri("https://templanza-api.onrender.com/"),
             Timeout = TimeSpan.FromSeconds(30)
         });
 
-        // tus servicios (usan ese HttpClient compartido)
         builder.Services.AddSingleton<AuthService>();
         builder.Services.AddSingleton<BlendsService>();
         builder.Services.AddSingleton<UsersService>();
